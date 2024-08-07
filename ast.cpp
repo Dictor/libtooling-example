@@ -1,5 +1,6 @@
 #include "clang/AST/AST.h"
 
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -17,19 +18,65 @@ using namespace clang::tooling;
 
 static llvm::cl::OptionCategory MyToolCategory("my-tool options");
 
+int RecursiveStmtComplexityScore(Stmt *stmt, int exponential_offset = 0) {
+  int ret = 0;
+  for (const auto s : stmt->children()) {
+    if (s == nullptr) {
+      llvm::outs() << std::string(2 + 2 * exponential_offset, ' ')
+                   << "(null stmt)\n";
+      continue;
+    }
+
+    auto name_charptr = s->getStmtClassName();
+    auto name = std::make_unique<std::string>(name_charptr);
+
+    if (name_charptr != nullptr) {
+      name.reset(new std::string(name_charptr));
+    }
+
+    llvm::outs() << std::string(2 + 2 * exponential_offset, ' ')
+                 << "  children " << *name.get() << "\n";
+    if (name.get()->compare("ForStmt") == 0) {
+      ret += pow(10, exponential_offset);
+    }
+
+    ret += RecursiveStmtComplexityScore(s, exponential_offset + 1);
+  }
+
+  return ret;
+}
+
 class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
  public:
-  explicit MyASTVisitor(ASTContext *Context) : Context(Context) {}
+  explicit MyASTVisitor(ASTContext *Context) : context_(Context) {}
+
+  bool VisitFunctionDecl(FunctionDecl *Decl) {
+    auto func_name = Decl->getDeclName().getAsString();
+    if (func_name.find("forTestFunc") != std::string::npos) {
+      llvm::outs() << "< function " << func_name << " >\n";
+      if (Decl->hasBody()) {
+        auto score = RecursiveStmtComplexityScore(Decl->getBody());
+        llvm::outs() << "  score: " << score << "\n";
+      }
+
+      for (auto stmt : Decl->decls()) {
+        auto kind = std::string(stmt->getDeclKindName());
+        llvm::outs() << "  kind: " << kind << "\n";
+      }
+    }
+    return true;
+  }
 
   bool VisitNamedDecl(NamedDecl *Declaration) {
     auto name = std::string(Declaration->getDeclName().getAsString());
-    if (name.find(std::string("main")) != std::string::npos) {
-      llvm::outs() << name << "\n";
+    if (name == "main") {
+      llvm::outs() << "<named " << name << " >\n";
 
       FullSourceLoc FullLocation =
-          Context->getFullLoc(Declaration->getBeginLoc());
+          context_->getFullLoc(Declaration->getBeginLoc());
       if (FullLocation.isValid()) {
-        llvm::outs() << FullLocation.getFileEntry()->tryGetRealPathName() << "\n";
+        llvm::outs() << FullLocation.getFileEntry()->tryGetRealPathName()
+                     << "\n";
       }
     }
 
@@ -37,19 +84,19 @@ class MyASTVisitor : public RecursiveASTVisitor<MyASTVisitor> {
   }
 
  private:
-  ASTContext *Context;
+  ASTContext *context_;
 };
 
 class MyASTConsumer : public clang::ASTConsumer {
  public:
-  explicit MyASTConsumer(ASTContext *Context) : Visitor(Context) {}
+  explicit MyASTConsumer(ASTContext *Context) : visitor_(Context) {}
 
   virtual void HandleTranslationUnit(clang::ASTContext &Context) {
-    Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+    visitor_.TraverseDecl(Context.getTranslationUnitDecl());
   }
 
  private:
-  MyASTVisitor Visitor;
+  MyASTVisitor visitor_;
 };
 
 class MyASTFrontendAction : public clang::ASTFrontendAction {

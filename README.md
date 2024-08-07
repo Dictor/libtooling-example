@@ -17,11 +17,15 @@ ninja
 ```
 
 ### execute
+```reference AST
+clang-check ../main.cpp --ast-dump | grep -A 30 "forTestFunc2"
+```
+
 ```bash
 ../../build/ast ../main.cpp
 ```
 
-expected result
+expected output
 ```
 warning: argument unused during compilation: '-c' [-Wunused-command-line-argument]
 In file included from /mnt/c/Jeonghyun/coding/ast/target/main.cpp:1:
@@ -34,29 +38,49 @@ In file included from /usr/bin/../lib/gcc/x86_64-linux-gnu/11/../../../../includ
 /usr/include/wchar.h:35:10: fatal error: 'stddef.h' file not found
    35 | #include <stddef.h>
       |          ^~~~~~~~~~
-__throw_domain_error
-/usr/include/c++/11/bits/functexcept.h
-__remaining
-/usr/include/time.h
-argument_out_of_domain
-/usr/include/x86_64-linux-gnu/c++/11/bits/error_constants.h
-domain_error
-/usr/include/c++/11/stdexcept
-domain_error
-/usr/include/c++/11/stdexcept
-domain_error
-/usr/include/c++/11/stdexcept
-domain_error
-/usr/include/c++/11/stdexcept
-domain_error
-/usr/include/c++/11/stdexcept
-~domain_error
-/usr/include/c++/11/stdexcept
-__remaining
-/usr/include/c++/11/bits/streambuf.tcc
-__remaining
-/usr/include/c++/11/bits/streambuf.tcc
-main
+< function forTestFunc1 >
+    children ForStmt
+      children DeclStmt
+        children IntegerLiteral
+    (null stmt)
+      children BinaryOperator
+        children ImplicitCastExpr
+          children DeclRefExpr
+        children IntegerLiteral
+      children UnaryOperator
+        children DeclRefExpr
+      children CompoundStmt
+        children GCCAsmStmt
+  score: 1
+  kind: Var
+< function forTestFunc2 >
+    children ForStmt
+      children DeclStmt
+        children IntegerLiteral
+    (null stmt)
+      children BinaryOperator
+        children ImplicitCastExpr
+          children DeclRefExpr
+        children IntegerLiteral
+      children UnaryOperator
+        children DeclRefExpr
+      children CompoundStmt
+        children ForStmt
+          children DeclStmt
+            children IntegerLiteral
+        (null stmt)
+          children BinaryOperator
+            children ImplicitCastExpr
+              children DeclRefExpr
+            children IntegerLiteral
+          children UnaryOperator
+            children DeclRefExpr
+          children CompoundStmt
+            children GCCAsmStmt
+  score: 101
+  kind: Var
+  kind: Var
+<named main >
 /mnt/c/Jeonghyun/coding/ast/target/main.cpp
 1 error generated.
 Error while processing /mnt/c/Jeonghyun/coding/ast/target/build/../main.cpp.
